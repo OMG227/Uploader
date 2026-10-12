@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>UPLOADER — panelhp.my.id</title>
+<title>UPLOADER</title>
 <style>
 :root{--bg:#fffdf0;--fg:#000;--card:#fff;--acc:#ff5c8a;--acc2:#ffe600;--ok:#4dff88;--bad:#ff3b3b}
-[data-theme="dark"]{--bg:#111;--fg:#fff;--card:#1c1c1c;--acc:#ff5c8a;--acc2:#ffe600;--ok:#4dff88;--bad:#ff3b3b}
+[data-theme="dark"]{--bg:#111;--fg:#fff;--card:#1c1c1c}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:"Courier New",monospace;padding:20px;min-height:100vh}
 .wrap{max-width:640px;margin:0 auto}
 header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:20px}
 h1{margin:0;font-size:clamp(28px,8vw,44px);background:var(--acc2);color:#000;border:4px solid var(--fg);box-shadow:6px 6px 0 var(--fg);padding:4px 12px;text-transform:uppercase;letter-spacing:-1px}
-button,.btn{font-family:inherit;font-weight:900;text-transform:uppercase;border:4px solid var(--fg);background:var(--acc);color:#000;padding:12px 16px;cursor:pointer;box-shadow:5px 5px 0 var(--fg);font-size:15px}
+button{font-family:inherit;font-weight:900;text-transform:uppercase;border:4px solid var(--fg);background:var(--acc);color:#000;padding:12px 16px;cursor:pointer;box-shadow:5px 5px 0 var(--fg);font-size:15px}
 button:active{transform:translate(5px,5px);box-shadow:none}
 button:disabled{opacity:.5;cursor:not-allowed}
 #theme{background:var(--card);color:var(--fg);padding:8px 12px}
@@ -22,55 +22,39 @@ button:disabled{opacity:.5;cursor:not-allowed}
 #info{margin:14px 0;font-weight:700;word-break:break-all}
 .bar{height:26px;border:4px solid var(--fg);background:var(--card);margin:14px 0;display:none}
 .bar div{height:100%;width:0;background:var(--ok);transition:width .15s}
-.row{display:flex;gap:10px;flex-wrap:wrap}
-.row button{flex:1}
-#msg{font-weight:900;margin-top:12px;padding:10px;border:4px solid var(--fg);display:none}
-#msg.err{background:var(--bad);color:#000}
-#msg.ok{background:var(--ok);color:#000}
-h2{margin:0 0 12px;text-transform:uppercase;background:var(--fg);color:var(--bg);display:inline-block;padding:2px 10px;font-size:18px}
-.item{border:4px solid var(--fg);padding:10px;margin-bottom:12px;background:var(--bg)}
-.item img{max-width:100%;max-height:160px;border:3px solid var(--fg);display:block;margin-bottom:8px}
-.item a{color:var(--fg);font-weight:900;word-break:break-all}
-.meta{font-size:13px;margin:6px 0}
-.item button{padding:6px 10px;font-size:13px;box-shadow:3px 3px 0 var(--fg)}
-footer{text-align:center;font-weight:900;font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row button{flex:1}
+#res{display:none;margin-top:16px;padding:12px;border:4px solid var(--fg);font-weight:900;word-break:break-all}
+#res.ok{background:var(--ok);color:#000}#res.err{background:var(--bad);color:#000}
+#res a{color:#000}
+#res .meta{font-size:13px;margin:8px 0;font-weight:700}
+#res button{padding:6px 10px;font-size:13px;box-shadow:3px 3px 0 #000;background:#fff}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>Uploader</h1>
-    <button id="theme">Gelap/Terang</button>
-  </header>
-
+  <header><h1>Uploader</h1><button id="theme">Gelap/Terang</button></header>
   <div class="card">
     <input type="file" id="file" hidden>
     <div id="drop">Klik atau drop file di sini</div>
     <div id="info">Belum ada file dipilih.</div>
     <div class="bar" id="bar"><div></div></div>
-    <div class="row">
-      <button id="go" disabled>Upload</button>
-      <button id="reset" style="background:var(--acc2)">Reset</button>
-    </div>
-    <div id="msg"></div>
+    <div class="row"><button id="go" disabled>Upload</button><button id="reset" style="background:var(--acc2)">Reset</button></div>
+    <div id="res"></div>
   </div>
-
-  <div class="card">
-    <h2>Riwayat</h2>
-    <div id="list"><div class="meta">Kosong.</div></div>
-  </div>
-
-  <footer>PANELHP.MY.ID</footer>
 </div>
 
 <script>
 const KEY = "AIzaBj7z2z3xBjsk";
 const DOMAIN = "https://c.termai.cc";
+const MAX = 25 * 1024 * 1024;
 const $ = id => document.getElementById(id);
 let picked = null;
-let history = [];
 
-// tema
+const fmt = b => b >= 1048576 ? (b/1048576).toFixed(2)+" MB" : b >= 1024 ? (b/1024).toFixed(1)+" KB" : b+" B";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const stamp = () => new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Jakarta",dateStyle:"short",timeStyle:"medium"}).format(new Date()) + " WIB";
+const one = s => String(s).replace(/[\r\n]+/g," ").slice(0,200); // satu baris saja
+
 try{ const t = localStorage.getItem("theme"); if(t) document.documentElement.dataset.theme = t; }catch(e){}
 $("theme").onclick = () => {
   const n = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
@@ -78,79 +62,77 @@ $("theme").onclick = () => {
   try{ localStorage.setItem("theme", n); }catch(e){}
 };
 
-// riwayat
-try{ history = JSON.parse(localStorage.getItem("hist") || "[]"); }catch(e){}
-const fmt = b => b > 1048576 ? (b/1048576).toFixed(2)+" MB" : (b/1024).toFixed(1)+" KB";
-
-function render(){
-  const l = $("list");
-  if(!history.length){ l.innerHTML = '<div class="meta">Kosong.</div>'; return; }
-  l.innerHTML = "";
-  history.forEach((h,i) => {
-    const d = document.createElement("div"); d.className = "item";
-    if((h.mimetype||"").startsWith("image/")){
-      const im = document.createElement("img"); im.src = h.path; im.alt = ""; d.appendChild(im);
-    }
-    const a = document.createElement("a"); a.href = h.path; a.target = "_blank"; a.rel = "noopener"; a.textContent = h.path;
-    d.appendChild(a);
-    const m = document.createElement("div"); m.className = "meta"; m.textContent = h.mimetype + " • " + fmt(h.size);
-    d.appendChild(m);
-    const c = document.createElement("button"); c.textContent = "Copy";
-    c.onclick = () => navigator.clipboard.writeText(h.path).then(() => { c.textContent = "Tersalin!"; setTimeout(() => c.textContent = "Copy", 1200); });
-    const x = document.createElement("button"); x.textContent = "Hapus"; x.style.marginLeft = "8px"; x.style.background = "var(--bad)";
-    x.onclick = () => { history.splice(i,1); save(); render(); };
-    d.appendChild(c); d.appendChild(x);
-    l.appendChild(d);
-  });
-}
-function save(){ try{ localStorage.setItem("hist", JSON.stringify(history)); }catch(e){} }
-
-function msg(t, type){ const m = $("msg"); m.textContent = t; m.className = type; m.style.display = "block"; }
+function show(html, type){ const r = $("res"); r.innerHTML = html; r.className = type; r.style.display = "block"; }
 function pick(f){
   if(!f) return;
-  picked = f;
-  $("info").textContent = f.name + " • " + fmt(f.size);
-  $("go").disabled = false;
-  $("msg").style.display = "none";
+  picked = f; $("info").textContent = f.name + " • " + fmt(f.size);
+  $("go").disabled = false; $("res").style.display = "none";
 }
-
 $("drop").onclick = () => $("file").click();
 $("file").onchange = e => pick(e.target.files[0]);
 ["dragover","dragenter"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
 ["dragleave","drop"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
 $("drop").addEventListener("drop", e => pick(e.dataTransfer.files[0]));
 document.addEventListener("paste", e => { const f = e.clipboardData && e.clipboardData.files[0]; if(f) pick(f); });
+$("reset").onclick = () => { picked = null; $("file").value = ""; $("info").textContent = "Belum ada file dipilih."; $("go").disabled = true; $("bar").style.display = "none"; $("res").style.display = "none"; };
 
-$("reset").onclick = () => {
-  picked = null; $("file").value = ""; $("info").textContent = "Belum ada file dipilih.";
-  $("go").disabled = true; $("bar").style.display = "none"; $("msg").style.display = "none";
-};
+/* upload langsung ke termai */
+function doUpload(file){
+  return new Promise(resolve => {
+    const t0 = performance.now();
+    const fd = new FormData(); fd.append("file", file, file.name);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", DOMAIN + "/api/upload?key=" + KEY);
+    $("bar").style.display = "block"; $("bar").firstElementChild.style.width = "0";
+    xhr.upload.onprogress = e => { if(e.lengthComputable) $("bar").firstElementChild.style.width = (e.loaded/e.total*100) + "%"; };
+    const done = o => resolve({ ...o, ms: Math.round(performance.now() - t0) });
+    xhr.onload = () => {
+      try{
+        const r = JSON.parse(xhr.responseText);
+        if(r.status && r.path) done({ ok:true, data:r, http:xhr.status });
+        else done({ ok:false, error:(r.message || r.error || xhr.responseText.slice(0,100)), http:xhr.status });
+      }catch(e){ done({ ok:false, error:"respons server tidak valid", http:xhr.status }); }
+    };
+    xhr.onerror = () => done({ ok:false, error:"koneksi gagal / diblokir CORS", http:0 });
+    xhr.send(fd);
+  });
+}
 
-$("go").onclick = () => {
+/* isi log.txt, formatnya sesuai contoh */
+function buildEntry(file, res){
+  const ext = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "-";
+  const size = (res.ok && res.data.size) || file.size;
+  const L = [];
+  L.push(`[${stamp()}] ` + (res.ok ? "File has been upload" : "File failed to upload"));
+  L.push(`Status   : ${res.ok ? "SUCCESS" : "FAILED"}`);
+  L.push(`Nama     : ${one(file.name)}`);
+  L.push(`Format   : ${one((res.ok && res.data.mimetype) || file.type || "unknown")} (.${one(ext)})`);
+  L.push(`Ukuran   : ${fmt(size)} (${size} bytes)`);
+  L.push(res.ok ? `Link     : ${one(res.data.path)}` : `Error    : ${one(res.error)}`);
+  L.push(`Server   : ${DOMAIN.replace("https://","")} (HTTP ${res.http})`);
+  L.push(`Durasi   : ${(res.ms/1000).toFixed(2)} detik`);
+  L.push(`Bahasa   : ${one(navigator.language || "-")}`);
+  L.push(`Perangkat: ${one(navigator.userAgent).slice(0,110)}`);
+  return L.join("\n");
+}
+function sendLog(entry){
+  fetch("/api/log", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ entry }), keepalive:true }).catch(() => {});
+}
+
+$("go").onclick = async () => {
   if(!picked) return;
-  const fd = new FormData();
-  fd.append("file", picked, picked.name);
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", DOMAIN + "/api/upload?key=" + KEY);
-  $("bar").style.display = "block"; $("bar").firstElementChild.style.width = "0";
-  $("go").disabled = true; $("msg").style.display = "none";
-  xhr.upload.onprogress = e => { if(e.lengthComputable) $("bar").firstElementChild.style.width = (e.loaded/e.total*100) + "%"; };
-  xhr.onload = () => {
-    $("go").disabled = false;
-    try{
-      const r = JSON.parse(xhr.responseText);
-      if(r.status && r.path){
-        history.unshift({path:r.path, mimetype:r.mimetype||"file", size:r.size||picked.size});
-        history = history.slice(0,20); save(); render();
-        msg("BERHASIL! Link sudah masuk riwayat.", "ok");
-      } else msg("GAGAL: " + (r.message || r.error || xhr.responseText.slice(0,120)), "err");
-    }catch(e){ msg("GAGAL: respons server tidak valid.", "err"); }
-  };
-  xhr.onerror = () => { $("go").disabled = false; msg("GAGAL: koneksi/CORS diblokir server.", "err"); };
-  xhr.send(fd);
+  const file = picked;
+  if(file.size > MAX){ show("GAGAL: file lebih dari 25 MB.", "err"); return; }
+  $("go").disabled = true; $("res").style.display = "none";
+  const res = await doUpload(file);
+  sendLog(buildEntry(file, res));
+  $("go").disabled = false;
+  if(res.ok){
+    const r = res.data;
+    show('BERHASIL!<div class="meta">' + esc(r.mimetype || "file") + " • " + fmt(r.size || file.size) + '</div><a href="' + esc(r.path) + '" target="_blank" rel="noopener">' + esc(r.path) + '</a><br><br><button id="cp">Copy link</button>', "ok");
+    $("cp").onclick = () => navigator.clipboard.writeText(r.path).then(() => { $("cp").textContent = "Tersalin!"; });
+  } else show("GAGAL: " + esc(res.error), "err");
 };
-
-render();
 </script>
 </body>
 </html>
